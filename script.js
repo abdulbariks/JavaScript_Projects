@@ -1,136 +1,142 @@
 // Define UI element
-let form = document.querySelector('#task_form');
-let taskInput = document.querySelector('#new_task');
-let filter = document.querySelector('#task_filter');
-let taskList = document.querySelector('ul');
-let clearBtn = document.querySelector('#clear_task_btn'); 
+const form = document.querySelector("#book-form");
+const booklist =document.querySelector("#book-list");
 
 
-// Define event listeners
-form.addEventListener('submit', addTask);
-taskList.addEventListener('click', removeTask);
-clearBtn.addEventListener('click', clearTask);
-filter.addEventListener('keyup', filterTask)
-document.addEventListener('DOMContentLoaded', getTasks);
-
-
-
-// Define functions
-// Add Task
-function addTask(e){
-       if (taskInput.value ==='') {
-           alert("Add a Task")
-       } else {
-        //Create li element
-        let li = document.createElement('li');
-        li.appendChild(document.createTextNode(taskInput.value + ""));
-        let link =document.createElement('a');
-        link.setAttribute('href', '#');
-        link.innerHTML = 'X';
-        li.appendChild(link);
-        taskList.appendChild(li);
-        
-        storeTaskInLocalStorage(taskInput.value);
-
-        taskInput.value = '';
-       }
-       e.preventDefault();
-}
-
-
-// Remove Task
-function removeTask(e) {
-    if (e.target.hasAttribute('href')) {
-        if (confirm("Are You Sure?")) {
-            let ele = e.target.parentElement;
-            // console.log(ele);
-            ele.remove();
-
-            removeFromlocalStorage(ele);
-
-        }
-        
+// Book Class
+class Book{
+    constructor(title, author, isbn){
+              this.title = title;
+              this.author = author;
+              this.isbn = isbn;
     }
 }
 
-// Clear Task
-function clearTask(e) {
-    // taskList.innerHTML = "";
 
-    // Faster
-    while(taskList.firstChild){
-        taskList.removeChild(taskList.firstChild);
+// UI Class
+class UI{
+    static addTobookList(book){
+        let list = document.querySelector("#book-list");
+        let row = document.createElement("tr");
+        row.innerHTML = `
+        <td>${book.title}</td>
+        <td>${book.author}</td>
+        <td>${book.isbn}</td>
+        <td><a href = "#" class = "delete">X</a></td>`;
+
+        list.appendChild(row)
     }
 
-    localStorage.clear();
-}
+    static clearFields(){
+        document.querySelector("#title").value ="";
+        document.querySelector("#author").value ="";
+        document.querySelector("#isbn").value ="";
+    }
 
-
-// Filter Task
-function filterTask(e) {
-    let text = e.target.value.toLowerCase();
-     
-    document.querySelectorAll('li').forEach(task =>{
-        let item = task.firstChild.textContent;
-        if (item.toLowerCase().indexOf(text) != -1) {
-           task.style.display = 'block';
-        } else {
-            task.style.display = 'none';
+    static deleteFormbook(target){
+        if (target.hasAttribute("href")) {
+            target.parentElement.parentElement.remove();
+            Store.removeBook(target.parentElement.previousElementSibling.textContent.trim());
+            UI.showAlert("Book Removed!", "success")
         }
-    });
 
+    }
+
+    static showAlert(message, className){
+        let div = document.createElement('div');
+        div.className = `alert ${className}`;
+        div.appendChild(document.createTextNode(message))
+        let container = document.querySelector('.container');
+        let form = document.querySelector("#book-form");
+        container.insertBefore(div, form);
+
+        setTimeout(() => {
+            document.querySelector('.alert').remove();
+        }, 4000);
+    }
+    
 }
-
 
 
 // Store in Local Storage
-function storeTaskInLocalStorage(task) {
-    let tasks;
-    if (localStorage.getItem('tasks') === null) {
-        tasks = [];
-    } else {
-        tasks = JSON.parse(localStorage.getItem('tasks'));
-    }
+//Local Storage Class
+class Store { 
 
-    tasks.push(task);
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+   static getBooks(){
+           let books;
+           if (localStorage.getItem('books') === null) {
+             books = [];
+           } else {
+             books = JSON.parse(localStorage.getItem('books'));
+            
+           }
+           return books;
+   }
+
+   static addBook (book){
+    let books = Store.getBooks();
+    books.push(book);
+    localStorage.setItem('books', JSON.stringify(books));
+   }
+
+   static displayBooks(){
+    let books = Store.getBooks();
+
+    // console.log(books);
+
+    books.forEach(book => {
+        UI.addTobookList(book);
+    });
+   }
+
+   static removeBook(isbn){
+    let books = Store.getBooks();
+    books.forEach((book, index) => {
+        if (book.isbn === isbn) {
+            books.splice(index, 1);
+        }
+    });
+
+    localStorage.setItem('books', JSON.stringify(books));
+   }
+
+}
+// Add Event Listener
+document.addEventListener('DOMContentLoaded', Store.displayBooks());
+
+// Add Event Listener
+form.addEventListener("submit", newBook);
+// Define functions
+function newBook(e){
+const title = document.querySelector("#title").value,
+author = document.querySelector("#author").value,
+isbn = document.querySelector("#isbn").value;
+
+if (title === "" || author === "" || isbn=== "") {
+    UI.showAlert("Please Fill All the Fields!", "error");
+} else {
+let book = new Book(title, author, isbn);
+console.log(book);
+
+UI.addTobookList(book);
+
+UI.clearFields();
+UI.showAlert("Book Added", "success");
+
+Store.addBook(book);
 }
 
+e.preventDefault();
 
-function getTasks() {
-    let tasks;
-    if (localStorage.getItem('tasks') === null) {
-        tasks = [];
-    } else {
-        tasks = JSON.parse(localStorage.getItem('tasks'));
-    }
-
-    tasks.forEach(task =>{
-        let li = document.createElement('li');
-        li.appendChild(document.createTextNode(task + ""));
-        let link =document.createElement('a');
-        link.setAttribute('href', '#');
-        link.innerHTML = 'X';
-        li.appendChild(link);
-        taskList.appendChild(li);
-    })
 }
 
-function removeFromlocalStorage(taskItem) {
-    let tasks;
-    if (localStorage.getItem('tasks') === null) {
-        tasks = [];
-    } else {
-        tasks = JSON.parse(localStorage.getItem('tasks'));
-    }
-  let li = taskItem;
-  li.removeChild(li.lastChild);
+// Add Event Listener
+booklist.addEventListener("click", removeBook);
+ function removeBook(e){
+      UI.deleteFormbook(e.target);
+    e.preventDefault();
+ }
 
-  tasks.forEach((task, index)=>{
-    if (li.textContent.trim()=== task) {
-        tasks.splice(index, 1);
-    }
-  })
 
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-}
+
+
